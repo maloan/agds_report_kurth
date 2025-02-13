@@ -108,7 +108,7 @@ cat(
 ---
 ### Data frames
 
-```{r vectors}
+```{r dataframes}
 print(datasets::quakes)
 cat("Dimension:", dim(datasets::quakes), "\n")
 print(datasets::quakes['mag'])
