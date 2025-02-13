@@ -1,0 +1,70 @@
+---
+title: "exercises agds"
+author: "Kurth"
+date: "2025-02-13"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## 2.3 Exercises
+### Dimensions of a circle
+```{r cicle}
+r <- c(2, 4, 6)
+circ <- 2*pi*r
+area <- pi*r^2
+cat("circumfence:", as.character(circ), "\n")
+cat("area:", as.character(area))
+```
+---
+### Sequence of numbers
+
+```{r sequence}
+seq(0, pi, length.out=5)
+```
+---
+### Gauss sum
+
+```{r gauss}
+sum(seq(0, 100))
+50*101
+```
+---
+### Magic trick algorithm
+
+```{r magic-trick}
+for(i in c(1, 2, 3, 4)){
+  x <- i+1;
+  x <- x*2;
+  x <- x+4;
+  x <- x/2;
+  x <- x-i;
+  print(x)
+}
+```
+
+---
+### Vectors
+
+```{r vectors}
+print(datasets::rivers)
+cat("class:", class(datasets::rivers), "\n")
+cat("length:", length(datasets::rivers), "\n")
+cat("mean:", mean(datasets::rivers), "\n", "median:", median(datasets::rivers), "\n", "min:", min(datasets::rivers), "\n", "max:", max(datasets::rivers), "\n", "33%-quantil:", quantile(datasets::rivers, probs=0.33), "\n")
+```
+---
+### Data frames
+
+```{r vectors}
+print(datasets::quakes)
+cat("Dimension:", dim(datasets::quakes), "\n")
+print(datasets::quakes['mag'])
+print(max(datasets::quakes$mag))
+print(datasets::quakes[which.max(datasets::quakes$mag), c(1,2)])
+```
+
+
+
+
