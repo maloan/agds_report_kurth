@@ -1,48 +1,62 @@
 ---
-title: "exercises agds"
+title: "2.3 Exercises"
 author: "Kurth"
 date: "2025-02-13"
-output: html_document
+output: markdown
 ---
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-```
 
 ## 2.3 Exercises
 ### Dimensions of a circle
 ```{r cicle}
 r <- c(2, 4, 6)
-circ <- 2*pi*r
-area <- pi*r^2
+circ <- 2 * pi * r
+area <- pi * r^2
 cat("circumfence:", as.character(circ), "\n")
 cat("area:", as.character(area))
+
+# circumference: 12.5663706143592 25.1327412287183 37.6991118430775
+# area: 12.5663706143592 50.2654824574367 113.097335529233
 ```
 ---
 ### Sequence of numbers
 
 ```{r sequence}
-seq(0, pi, length.out=5)
+seq(0, pi, length.out = 5)
+# [1] 0.0000000 0.7853982 1.5707963 2.3561945 3.1415927
 ```
 ---
 ### Gauss sum
 
 ```{r gauss}
 sum(seq(0, 100))
-50*101
+50 * 101
+
+# [1] 5050
+# [1] 5050
 ```
 ---
 ### Magic trick algorithm
 
 ```{r magic-trick}
-for(i in c(1, 2, 3, 4)){
-  x <- i+1;
-  x <- x*2;
-  x <- x+4;
-  x <- x/2;
-  x <- x-i;
+for(i in c(1, 2, 3, 4)) {
+  x <- i + 1
+  
+  x <- x * 2
+  
+  x <- x + 4
+  
+  x <- x / 2
+  
+  x <- x - i
+  
   print(x)
 }
+
+# [1] 3
+# [1] 3
+# [1] 3
+# [1] 3
 ```
 
 ---
@@ -52,7 +66,44 @@ for(i in c(1, 2, 3, 4)){
 print(datasets::rivers)
 cat("class:", class(datasets::rivers), "\n")
 cat("length:", length(datasets::rivers), "\n")
-cat("mean:", mean(datasets::rivers), "\n", "median:", median(datasets::rivers), "\n", "min:", min(datasets::rivers), "\n", "max:", max(datasets::rivers), "\n", "33%-quantil:", quantile(datasets::rivers, probs=0.33), "\n")
+cat(
+  "mean:",
+  mean(datasets::rivers),
+  "\n",
+  "median:",
+  median(datasets::rivers),
+  "\n",
+  "min:",
+  min(datasets::rivers),
+  "\n",
+  "max:",
+  max(datasets::rivers),
+  "\n",
+  "33%-quantil:",
+  quantile(datasets::rivers, probs = 0.33),
+  "\n"
+)
+
+
+#   [1]  735  320  325  392  524  450 1459  135  465  600  330  336
+#  [13]  280  315  870  906  202  329  290 1000  600  505 1450  840
+#  [25] 1243  890  350  407  286  280  525  720  390  250  327  230
+#  [37]  265  850  210  630  260  230  360  730  600  306  390  420
+#  [49]  291  710  340  217  281  352  259  250  470  680  570  350
+#  [61]  300  560  900  625  332 2348 1171 3710 2315 2533  780  280
+#  [73]  410  460  260  255  431  350  760  618  338  981 1306  500
+#  [85]  696  605  250  411 1054  735  233  435  490  310  460  383
+#  [97]  375 1270  545  445 1885  380  300  380  377  425  276  210
+# [109]  800  420  350  360  538 1100 1205  314  237  610  360  540
+# [121] 1038  424  310  300  444  301  268  620  215  652  900  525
+# [133]  246  360  529  500  720  270  430  671 1770
+# class: numeric
+# length: 141
+# mean: 591.1844
+#  median: 425
+#  min: 135
+#  max: 3710
+#  33%-quantil: 342 
 ```
 ---
 ### Data frames
@@ -62,7 +113,31 @@ print(datasets::quakes)
 cat("Dimension:", dim(datasets::quakes), "\n")
 print(datasets::quakes['mag'])
 print(max(datasets::quakes$mag))
-print(datasets::quakes[which.max(datasets::quakes$mag), c(1,2)])
+print(datasets::quakes[which.max(datasets::quakes$mag), c(1, 2)])
+
+# Dimension: 1000 5
+# [1] 6.4
+#
+# mag
+# <dbl>
+# 4.8
+# 4.2
+# 5.4
+# 4.1
+# 4.0
+# 4.0
+# 4.8
+# 4.4
+# 4.7
+# 4.3
+#
+#
+# lat
+# <dbl>
+# long
+# <dbl>
+# 152	-15.56	167.62
+# 1 row
 ```
 
 
