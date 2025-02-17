@@ -1,0 +1,66 @@
+---
+title: "3.3_exercises"
+author: "Kurth"
+output: html_document
+---
+
+```{r gauss_variation_1}
+# for loop
+vec_sum <- 0
+vec_num <- seq(100)
+for (idx in seq(length(vec_num))){
+  vec_sum = vec_sum + vec_num[idx]
+}
+vec_sum
+
+
+# while loop
+idx = 1           # initialize counter
+vec_num <- seq(100)
+vec_sum <- 0     # initialize sum
+while (idx <= 100){
+  vec_sum <- vec_sum + vec_num[idx]
+  idx = idx + 1
+}
+vec_sum
+```
+
+
+```{r gauss_variation_2}
+vec_sum <- 0
+vec_num <- seq(100)
+for (idx in seq(length(vec_num))){
+  if(vec_num[idx]%%3 == 0 & vec_num[idx]%%7 == 0){
+    vec_sum = vec_sum + vec_num[idx]
+  }
+}
+cat("The sum of multiples of 3 and 7 within 1-100 is:", vec_sum)
+```
+
+```{r gauss_variation_2}
+mymat <- matrix(c(6, 7, 3, NA, 15, 6, 7, 
+              NA, 9, 12, 6, 11, NA, 3, 
+              9, 4, 7, 3, 21, NA, 6, 
+              rep(NA, 7)),
+            nrow = 4, byrow = TRUE)
+myvec <- c(8, 4, 12, 9, 15, 6)
+
+for (idx in seq(nrow(mymat))) {
+  for (idy in seq(ncol(mymat))) {
+    if (is.na(mymat[idx, idy]) && length(myvec) > 0) {
+      mymat[idx, idy] = max(myvec)
+      myvec = myvec[-which.max(myvec)]
+    }
+  }
+}
+mymat
+```
+
+
+
+```{r interpolation}
+myvec <- c(rep(6, 25), rep(NA, 41), rep(-20, 34))
+interp_vector <- approx(myvec, method="linear")
+plot(interp_vector)
+```
+
