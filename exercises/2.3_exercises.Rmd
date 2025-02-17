@@ -2,7 +2,6 @@
 title: "2.3 Exercises"
 author: "Kurth"
 date: "2025-02-13"
-output: markdown
 ---
 
 
