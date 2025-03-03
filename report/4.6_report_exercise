@@ -1,0 +1,17 @@
+---
+title: "4.6_report_erxercise"
+author: "Kurth"
+date: "2025-03-03"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Analyzing changes in soil organic matter during elevated CO2 experiments
+
+
+```{r cars}
+summary(cars)
+```
