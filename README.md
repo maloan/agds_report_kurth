@@ -1,6 +1,15 @@
-# agds_report_kurth
-Repository for the applied geodata science course in Spring 2025
+# 📊💻 AGDS Report
+This is a repository for the Applied Geodata Science course in Spring 2025. The overview of this repository's content can be found below: 
 
+---
+## Content
+- [Datasets for the report](./data/)
+- [Datasets for the exercises](./data_exercises/)
+- [Solved exercises](./exercises/)
+- [vignettes - Reports and documentation](./vignettes/)
 
-For the report exercises see /report/exercises
-For the general exercises see /exercises
+---
+
+## License
+See [LICENSE](./LICENSE) for license details.
+
