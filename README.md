@@ -6,7 +6,7 @@ This is a repository for the Applied Geodata Science course in Spring 2025. The 
 - [Datasets for the report](./data/)
 - [Datasets for the exercises](./data_exercises/)
 - [Solved exercises](./exercises/)
-- [vignettes - Reports and documentation](./vignettes/)
+- [Vignettes - Reports and documentation](./vignettes/)
 
 ---
 
