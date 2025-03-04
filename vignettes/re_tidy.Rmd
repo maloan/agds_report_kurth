@@ -1,0 +1,123 @@
+---
+title: "4.6_report_erxercise"
+author: "Kurth"
+date: "2025-03-03"
+output: html_document
+---
+
+# Analyzing changes in soil organic matter during elevated CO2 experiments
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## 1. Load libraries
+```{r load-libraries, message=FALSE, warning=FALSE}
+library(dplyr)
+library(lubridate)
+library(tidyr)
+library(readr)
+library(stringr)
+library(purrr)
+library(openxlsx)
+library(zoo)
+library(ggplot2)
+```
+
+## 2. Load dataset
+
+```{r load-dataset}
+raw_data <- read.xlsx(here::here("data/1249534s1-s6.xlsx"))
+```
+
+## 3. Clean dataset
+
+```{r clean-data}
+cleaned_data <- as_tibble(raw_data) |>
+  rename(
+    experiment = Database.S1..Overview.of.CO2.enrichment.studies.reporting.soil.C.contents.that.were.used.in.our.analysis.,
+    citation = X2,
+    depth = X3,
+    sample_date = X4,
+    time_years = X5,
+    SOC_ambient = X6,
+    SOC_elevated = X7,
+    n_sample_SOC_ambient = X8,
+    n_sample_SOC_elevated = X9,
+    description_source = X10,
+    value_treatment = X11
+  ) |> # Rename the columns.
+  slice(-c(1:3), ) |> # Remove empty rows at the top.
+  select(experiment,
+         time_years,
+         starts_with("SOC"),
+         starts_with("n_sample")) |> # Select columns that will be needed later.
+  mutate(
+    Time_Years = as.numeric(time_years),
+    SOC_ambient = as.numeric(SOC_ambient),
+    SOC_elevated = as.numeric(SOC_elevated)
+  ) |> # Make sure the data is numeric.
+  mutate(experiment = na.locf(na.locf(experiment, na.rm = FALSE), fromLast = TRUE)) |> # Interpolate experiment name
+  filter(!is.na(experiment)) # Remove any empty experiments if there are any.
+```
+
+## 4. Save cleaned dataset.
+```{r save-dataset}
+write_csv(cleaned_data, file = here::here("data/cleaned_data.csv")) # Save cleaned dataset as CSV.
+head(cleaned_data) # View cleaned dataset.
+```
+
+## 5. Calculate the log response and aggregate the data into experiment phases.
+```{r log-response}
+SOC_data <- read_csv(here::here("data/cleaned_data.csv"), show_col_types = FALSE) |>
+  mutate(log_response_ratio = log(SOC_elevated / SOC_ambient)) |> # Calculate lrr per experiment.
+  mutate(
+    phase = case_when(
+      time_years < 3 ~ "early_phase",
+      time_years >= 3 &
+        time_years <= 6 ~ "mid_phase",
+      time_years > 6 ~ "late_phase"
+    )
+  ) # aggregate data across experiments into phases.
+```
+
+## 6. Calculate the mean log response ratio for each phase
+```{r mean-log-response}
+phase_aggregate <- SOC_data |>
+  group_by(phase) |> # group by phase
+  summarize(mean_log_response_ratio = mean(log_response_ratio, na.rm = TRUE)) # calculate the mean lrr per phase.
+
+phase_aggregate |> knitr::kable() # View result
+```
+---
+
+## 7.Visualize the mean log response ration for each phase
+```{r visualize-results}
+ggplot(phase_aggregate,
+       aes(x = phase, y = mean_log_response_ratio, fill = phase)) +
+  geom_bar(stat = "identity") +
+  labs(title = "Mean Log-Response Ratio by Experimental Phase", x = "Experimental Phase", y = "Mean Log-Response Ratio") +
+  scale_x_discrete(limits = c("early_phase", "mid_phase", "late_phase")) +  # X axis value order
+  theme_minimal() +
+  theme(legend.position = "none",
+        # Remove legend
+        plot.title = element_text(hjust = 0.5))  # Center the title
+```
+
+
+
+## 7. Interpretation
+
+1. **What are the data?**
+
+
+2. **What is the hypothesis?**
+
+
+3. **Interpretation:**
+
+
+---
+
+**References:**
+- Groeningen et al. (2014). *Faster Decomposition Under Increased Atmospheric CO₂ Limits Soil Carbon Storage.* Science 344(6183): 508–9.
+
