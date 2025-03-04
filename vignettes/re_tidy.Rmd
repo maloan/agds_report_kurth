@@ -1,16 +1,16 @@
 ---
-title: "4.6_report_erxercise"
-author: "Kurth"
+title: "Analyzing changes in soil organic matter during elevated CO2 experiments"
+author: "Ananda Kurth"
 date: "2025-03-03"
 output: html_document
 ---
 
-# Analyzing changes in soil organic matter during elevated CO2 experiments
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ## 1. Load libraries
+
 ```{r load-libraries, message=FALSE, warning=FALSE}
 library(dplyr)
 library(lubridate)
@@ -52,7 +52,7 @@ cleaned_data <- as_tibble(raw_data) |>
          starts_with("SOC"),
          starts_with("n_sample")) |> # Select columns that will be needed later.
   mutate(
-    Time_Years = as.numeric(time_years),
+    time_years = as.numeric(time_years),
     SOC_ambient = as.numeric(SOC_ambient),
     SOC_elevated = as.numeric(SOC_elevated)
   ) |> # Make sure the data is numeric.
@@ -61,12 +61,14 @@ cleaned_data <- as_tibble(raw_data) |>
 ```
 
 ## 4. Save cleaned dataset.
+
 ```{r save-dataset}
 write_csv(cleaned_data, file = here::here("data/cleaned_data.csv")) # Save cleaned dataset as CSV.
 head(cleaned_data) # View cleaned dataset.
 ```
 
 ## 5. Calculate the log response and aggregate the data into experiment phases.
+
 ```{r log-response}
 SOC_data <- read_csv(here::here("data/cleaned_data.csv"), show_col_types = FALSE) |>
   mutate(log_response_ratio = log(SOC_elevated / SOC_ambient)) |> # Calculate lrr per experiment.
@@ -81,6 +83,7 @@ SOC_data <- read_csv(here::here("data/cleaned_data.csv"), show_col_types = FALSE
 ```
 
 ## 6. Calculate the mean log response ratio for each phase
+
 ```{r mean-log-response}
 phase_aggregate <- SOC_data |>
   group_by(phase) |> # group by phase
@@ -88,9 +91,11 @@ phase_aggregate <- SOC_data |>
 
 phase_aggregate |> knitr::kable() # View result
 ```
----
+
+------------------------------------------------------------------------
 
 ## 7.Visualize the mean log response ration for each phase
+
 ```{r visualize-results}
 ggplot(phase_aggregate,
        aes(x = phase, y = mean_log_response_ratio, fill = phase)) +
@@ -103,21 +108,19 @@ ggplot(phase_aggregate,
         plot.title = element_text(hjust = 0.5))  # Center the title
 ```
 
+## 8. Interpretation
 
+1.  **What are the data that you are looking at?\
+    ***The dataset contains measurements of soil organic carbon (SOC) under both ambient and elevated CO~2~ levels across multiple experiments. The variable `n_sample_SOC_ambient` represents the number of observations (sample size) under ambient conditions, while `n_sample_SOC_elevated` indicates the sample size under elevated CO~2~ conditions. The variable `time_years` refers to the total number of years each experiment has been conducted. The `log_response_ratio` measures the effect of elevated CO~2~ on SOC for each observation, and the `mean_log_response_ratio` aggregates the response across different experimental phases. The experimental phases are categorized as follows: `early_phase` if the experiment has been running for less than three years, `late_phase` if it has been running for more than six years, and `mid_phase` if it has been running for a duration between three and six years.*
 
-## 7. Interpretation
+2.  **What do you expect your analysis to show, what is your hypothesis?**\
+    **How should soil organic matter content change under elevated *CO~2~*?**\
+    *The hypothesis is that elevated CO~2~ levels enhance plant growth, leading to increased biomass production. As more plant residues enter the soil, soil organic carbon (SOC) levels should rise due to greater carbon input.*
 
-1. **What are the data?**
+3.  **Interpret your results after aggregating the data: What do your final numbers mean? Do they support your initial hypothesis? Why so, why not?\
+    ***The mean log response ratio indicates whether the soil organic carbon (SOC) levels increased or decreased under elevated CO~2~ conditions. A mean log response greater than 0 suggests that SOC increased, while a mean log response less than 0 indicates a decrease in SOC under higher CO~2~ levels. In this study, the mean log response ratios were positive during the early phase (0.0125) and mid-phase (0.0173), but negative during the late phase (-0.0306). This finding only partially supports the hypothesis. There was a slight increase in SOC during the first six years of elevated CO~2~ levels, which supports the hypothesis. However, this was followed by a decrease in SOC beyond the six-year mark, contradicting the hypothesis. This suggests that elevated CO~2~ levels may only lead to a short-term increase in SOC. The original paper offers a possible explanation for this phenomenon: The initial increase in SOC may lead to greater microbial decomposition, which accelerates soil carbon turnover and limits the long-term accumulation of carbon in the soil.*
 
+------------------------------------------------------------------------
 
-2. **What is the hypothesis?**
-
-
-3. **Interpretation:**
-
-
----
-
-**References:**
-- Groeningen et al. (2014). *Faster Decomposition Under Increased Atmospheric CO₂ Limits Soil Carbon Storage.* Science 344(6183): 508–9.
-
+**Reference:** 
+Kees Jan van Groenigen *et al.,* Faster Decomposition Under Increased Atmospheric CO~2~ Limits Soil Carbon Storage. *Science* **344**, 508-509 (2014). DOI: [10.1126/science.1249534](#0)
