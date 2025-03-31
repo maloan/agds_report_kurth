@@ -1,0 +1,202 @@
+---
+title: "6.4_exercises"
+output: html_document
+---
+
+# Exercises chapter 6
+```{r libraries}
+library(dplyr)
+library(jsonlite)
+library(ggplot2)
+library(readr)
+library(lubridate)
+```
+
+## Files and file formats 
+
+### Reading and writing human-readable files
+
+1.  While **not leaving your R session**, download and open the files at the following locations: <https://raw.githubusercontent.com/geco-bern/agds_book/refs/heads/main/book/data/demo_1.csv> <https://raw.githubusercontent.com/geco-bern/agds_book/refs/heads/main/book/data/demo_2.csv> <https://raw.githubusercontent.com/geco-bern/agds_book/refs/heads/main/book/data/demo_3.csv>
+
+```{r download}
+
+# read in the first demo
+demo_01 <- read.table(
+    "https://raw.githubusercontent.com/geco-bern/agds_book/refs/heads/main/book/data/demo_1.csv",
+    sep = ",",
+    header = TRUE
+    )
+
+# read in the second demo
+demo_02 <- read.table(
+    "https://raw.githubusercontent.com/geco-bern/agds_book/refs/heads/main/book/data/demo_2.csv",
+    sep = ",",
+    header = TRUE
+    )
+
+# read in the third demo
+demo_03 <- read.table(
+    "https://raw.githubusercontent.com/geco-bern/agds_book/refs/heads/main/book/data/demo_3.csv",
+    sep = ",",
+    header = TRUE
+)
+```
+
+2.  Once loaded into your R environment, combine and save all data as a temporary CSV file. Read in the new temporary CSV file, and save it as a JSON file in your current working directory.
+
+```{r combine}
+demo_all <- bind_rows(demo_01, demo_02, demo_03)
+
+# writing the data to a temporary CSV file
+write.table(
+    demo_all, 
+    file = file.path(tempdir(), "tmp_csv_file.csv"),
+    col.names = TRUE,
+    row.names = FALSE,
+    sep = ","
+)
+
+# reading the data from the temporary CSV file
+demo_all_reload <- read.table(
+    file.path(tempdir(), "tmp_csv_file.csv"),
+    sep = ",",
+    header = TRUE
+)
+
+# writing the data to a JSON file and save in the current working directory
+write_json(
+    demo_all_reload,
+    path = file.path(tempdir(), "tmp_json_file.json")
+)  
+
+df_json <- read_json(
+  file.path(tempdir(), "tmp_json_file.json"),
+  simplifyVector = TRUE
+)
+
+identical(df_json, demo_all_reload)
+```
+
+## Reading and writing binary files
+
+Download and open the following file: <https://raw.githubusercontent.com/geco-bern/agds_book/refs/heads/main/book/data/demo_data.nc>
+
+1.  What file format are we dealing with? \> NetCDF - Network Common Data Form. \> NetCDF is a file format for storing multidimensional scientific data (variables) such as temperature, humidity, pressure, wind speed, and direction.\
+2.  What library would you use to read this kind of data? \> {ncdf4}
+3.  What does this file contain?
+
+```{r}
+library(ncdf4)
+nc <- nc_open("https://raw.githubusercontent.com/geco-bern/agds_book/refs/heads/main/book/data/demo_data.nc")
+nc
+```
+
+4.  Write this file to disk in a different geospatial format you desire (use the R documentation of the library used to read the file and the chapter information).
+
+```{r write}
+# write the data as a geotiff
+terra::writeRaster(
+  nc,
+  filename = "./test.tif",
+  overwrite = TRUE
+  ) 
+```
+
+5.  Download and open the following file: <https://raw.githubusercontent.com/geco-bern/agds_book/refs/heads/main/book/data/demo_data.tif>.
+
+```{r}
+library("terra")
+url <- "https://raw.githubusercontent.com/geco-bern/agds_book/refs/heads/main/book/data/demo_data.tif"
+
+demo_data <- terra::rast(url)
+demo_data
+```
+
+6.  Does this data seem familiar, and how can you tell? What are your conclusions?
+
+## API use
+
+### GET
+
+1.  Download the HWSD total sand content data for the extent of Switzerland following the tutorial example.
+
+```{r}
+# set API URL endpoint
+# for the total sand content
+url <- "https://thredds.daac.ornl.gov/thredds/ncss/ornldaac/1247/T_SAND.nc4"
+
+# formulate query to pass to httr
+query <- list(
+  "var" = "T_SAND",
+  "south" = 32,
+  "west" = -81,
+  "east" = -80,
+  "north" = 34,
+  "disableProjSubset" = "on",
+  "horizStride" = 1,
+  "accept" = "netcdf4"
+)
+
+# download data using the
+# API endpoint and query data
+status <- httr::GET(
+  url = url,
+  query = query,
+  httr::write_disk(
+    path = file.path(tempdir(), "T_SAND.nc"),
+    overwrite = TRUE
+  )
+)
+
+```
+
+Visualize/plot the data as a simple map.
+
+```{r}
+sand <- terra::rast(file.path(tempdir(), "T_SAND.nc"))
+terra::plot(sand)
+```
+
+Download the HWSD topsoil silt content for the extent of Switzerland.
+
+```{r}
+# set API URL endpoint
+# for the topsoil silt content
+url <- "https://thredds.daac.ornl.gov/thredds/ncss/ornldaac/1247/T_SILT.nc4"
+
+# formulate query to pass to httr
+query <- list(
+  "var" = "T_SILT",
+  "south" = 32,
+  "west" = -81,
+  "east" = -80,
+  "north" = 34,
+  "disableProjSubset" = "on",
+  "horizStride" = 1,
+  "accept" = "netcdf4"      
+)
+
+status <- httr::GET(
+  url = url,
+  query = query,
+  httr::write_disk(
+    path = file.path(tempdir(), "T_SILT.nc"),
+    overwrite = TRUE
+  )
+)
+
+silt <- terra::rast(file.path(tempdir(), "T_SILT.nc"))
+terra::plot(silt)
+```
+
+### 6.4.0.1 Dedicated library
+
+1.  Use the {hwsdr} library (a dedicated package for the API) to download the same data. How does this compare to the previous code written?
+2.  List how many data products there are on the ORNL MODIS data repository.
+3.  Download the MODIS land cover map for the canton of Bern.
+
+```{r}
+library("hwsdr")
+library("MODISTools")
+
+```
