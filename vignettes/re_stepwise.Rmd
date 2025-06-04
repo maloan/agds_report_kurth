@@ -1,0 +1,266 @@
+---
+title: "Stepwise Forward Regression on GPP"
+author: "Ananda Kurth"
+date: "2025-06-01"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+---
+
+# Chapter 9 - Report Exercises
+
+## 1. Introduction
+
+In this report I apply a stepwise forward regression, on a preprocessed half‐hourly FLUXNET2015 dataset. and compare it to a single predictor model of the same data. 
+
+## 2. Setup and Data Loading
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r libraries, include=FALSE}
+library(ggplot2)
+library(dplyr)
+library(tidyverse)
+library(tibble)
+```
+
+```{r load-data}
+# Load the dataset prepared for stepwise regression.
+df <- read_csv("../data/df_for_stepwise_regression.csv", show_col_types = FALSE)
+
+# Remove any rows with missing values in GPP or predictors.
+df <- df |>
+  drop_na() |>
+  filter(!is.na(GPP_NT_VUT_REF))
+
+# Display first few rows to confirm column names and data structure
+head(df)
+```
+
+## 3. Evaluation of all bivariate models (single predictor)
+
+```{r stepwise-forward-regression}
+# 1. Set the number of predictors to be considered to p = 1.
+response_var <- "GPP_NT_VUT_REF"
+predictors <- names(df[, sapply(df, is.numeric)]) |> # set all other variables as predictors
+  setdiff(response_var)
+
+
+# 2. Fit all regression models with p predictors and compute their R2.
+models <- list()
+for (i in predictors) {
+  model <- lm(df[[response_var]] ~ df[[i]])
+  models[[i]] <- model
+}
+
+# 3. Select the model with p predictors that achieves the highest R2 (best fitting model) and compute its AIC.
+r2_values <- sapply(models, function(x)
+  summary(x)$r.squared) # calculate R2 values
+best_predictor <- predictors[which.max(r2_values)] # find the highest R2 value
+best_model     <- models[[best_predictor]] # find the model with that R2 value
+best_aic       <- AIC(best_model) # Calculate the AIC of that model
+
+# Report results
+cat("Best single‐predictor model:\n")
+cat("  Predictor: ", best_predictor, "\n")
+cat("  R²:        ", round(summary(best_model)$r.squared, 4), "\n")
+cat("  AIC:       ", round(best_aic, 2), "\n")
+```
+
+### 3.1. Visualization
+
+```{r}
+# Prepare data for visualization
+r2_df <- data.frame(Predictor = predictors, R2 = r2_values) |>
+  arrange(desc(R2)) |> # descending
+  mutate(Predictor = factor(Predictor, levels = Predictor))  # Keep order in plot
+
+# Plot
+ggplot(r2_df, aes(
+  x = Predictor,
+  y = R2,
+  fill = Predictor == best_predictor
+)) +
+  geom_bar(stat = "identity") +
+  labs(
+    title = "R2 of Single-Predictor Models",
+    subtitle = paste("Best predictor:", best_predictor),
+    x = "Predictor Variable",
+    y = expression(R^2)
+  ) +
+  theme_minimal() +
+  theme(legend.position = "none",
+        axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+> Interpretation: The most significant predictor is PPFD_IN (incoming photosynthetic photon flux density), explaining about 36.3% of the variance in GPP (R² ≈ 0.363). The AIC is approximately 45683. However, a high R² doesn’t guarantee predictive power due to potential issues like redundancy, interaction effects, and autocorrelation.
+
+------------------------------------------------------------------------
+
+## 4. Stepwise Forward Regression
+
+Having identified PPFD_IN as the strongest univariate predictor, I will move on to a multivariate model which adds one predictor at a time, prioritizing the one that maximizes R² and lowers AIC. The process stops when adding any remaining predictor increases AIC, indicating a poorer fit.
+
+```{r stepwise-forward-regression-model}
+stepwise_forward_selection <- function(df, response_var) {
+  # List all numeric variables
+  numeric_vars <- names(df)[sapply(df, is.numeric)]
+  # Exclude the response itself
+  predictors <- setdiff(numeric_vars, response_var)
+  
+  # Initialize storage
+  selected_predictors <- c()
+  best_model <- NULL
+  best_aic <- Inf
+  trace <- list()
+  
+  # Iterate until no predictors remain
+  for (p in 1:length(predictors)) {
+    remaining <- setdiff(predictors, selected_predictors)
+    if (length(remaining) == 0)
+      # stop if no predictors remain
+      break
+    
+    # Fit candidate models by adding each remaining predictor in turn
+    models <- list()
+    
+    for (pred in remaining) {
+      formula <- as.formula(paste(response_var, "~", paste(
+        c(selected_predictors, pred), collapse = "+"
+      ))) # formula
+      model <- lm(formula, data = df) # calculate lm
+      models[[pred]] <- model
+    }
+    
+    # Among these, choose the one with the highest R2
+    r2_scores <- sapply(models, function(m)
+      summary(m)$r.squared) # calculate all R2 values
+    best_new_predictor <- names(which.max(r2_scores)) # find the highest R2
+    best_new_model <- models[[best_new_predictor]] # Find the corresponding model
+    best_new_aic <- AIC(best_new_model) # Calculate the AIC of that model
+    
+    
+    # If AIC improves, accept this predictor; otherwise, stop
+    if (best_new_aic < best_aic) {
+      selected_predictors <- c(selected_predictors, best_new_predictor)
+      best_model <- best_new_model
+      best_aic <- best_new_aic
+      trace[[p]] <- list(
+        step = p,
+        added = best_new_predictor,
+        aic = best_new_aic,
+        r2 = summary(best_new_model)$r.squared
+      )
+    } else {
+      break
+    }
+  }
+  
+  return(
+    list(
+      model = best_model,
+      predictors = selected_predictors,
+      aic = best_aic,
+      r2 = if (!is.null(best_model))
+        summary(best_model)$r.squared
+      else
+        NA,
+      trace = trace
+    )
+  )
+}
+```
+
+```{r}
+# Apply the function to our dataframe
+result   <- stepwise_forward_selection(df, response_var = "GPP_NT_VUT_REF")
+trace_df <- bind_rows(lapply(result$trace, as_tibble))
+```
+
+### 4.1 Examination of Stepwise Trace
+
+```{r}
+do.call(rbind, lapply(result$trace, as.data.frame))
+```
+
+### 4.2 Final Model Performance
+
+```{r}
+cat("Final model AIC: ", round(result$aic, 2), "\n")
+cat("Final model R²:  ", round(result$r2, 4), "\n")
+```
+
+> The best single predictor model had an R² of about 0.3628 and an AIC of around 45683. The final model, incorporating ten predictors, increased the R² to roughly 0.5287 and reduced the AIC to about 42838. This suggests that the nine additional variables improved the model's ability to explain variance in GPP. The drop in AIC from approximately 45683 to 42838 shows that the model fit improved significantly.
+
+### 4.3. Visualizing Stepwise Progress
+
+```{r}
+# Build a data frame for plotting
+trace_df <- tibble(
+  step      = seq_along(result$trace),
+  predictor = sapply(result$trace, function(x)
+    x$added),
+  aic       = sapply(result$trace, function(x)
+    x$aic),
+  r2        = sapply(result$trace, function(x)
+    x$r2)
+)
+
+ggplot(trace_df, aes(x = step)) +
+  geom_line(aes(y = r2), color = "darkgreen", linewidth = 1) +
+  geom_point(aes(y = r2), color = "darkgreen", linewidth = 2) +
+  geom_line(aes(y = aic / 1e5),
+            color = "darkorange",
+            linewidth = 1) +  # scale AIC by 1e5
+  geom_point(aes(y = aic / 1e5),
+             color = "darkorange",
+             linewidth = 2) +
+  scale_y_continuous(name        = expression(R^2),
+                     sec.axis    = sec_axis( ~ . * 1e5, name = "AIC")) +
+  scale_x_continuous(breaks = trace_df$step) +
+  labs(title = "Stepwise Forward Selection Progress", x     = "Step Number", y     = expression(R^2)) +
+  theme_minimal() +
+  theme(
+    axis.title.y.left   = element_text(color = "darkgreen"),
+    axis.text.y.left    = element_text(color = "darkgreen"),
+    axis.title.y.right  = element_text(color = "darkorange"),
+    axis.text.y.right   = element_text(color = "darkorange")
+  )
+```
+
+> The plot shows the relationship between added predictors, R² and AIC. The green curve shows that R² increases with each predictor, though the rate of increase diminishes over time. In contrast, the orange curve indicates that AIC decreases until it levels off, where the model does not improve any further.
+
+## 5. Interpretation and Discussion
+
+The final model for Gross Primary Production (GPP) uses ten predictors: photosynthetic photon flux density (PPFD_IN), shortwave radiation (SW_IN_F), longwave radiation (LW_IN_F), temperature (TA_F_MDS), vapour pressure deficit (VPD_F_MDS), turbulence (USTAR), wind speed (WS_F), precipitation (P_F), atmospheric pressure (PA_F), and carbon dioxide concentration (CO2_F_MDS). These predictors explain about 52.9% of the variation in GPP measurements.
+
+Although adding more predictors generally increases the R² value, the improvements become smaller, especially for related variables like radiation and temperature.
+
+The first model's R² value is 0.3628. The second Model raises this value to 0.5287 and lowers the Akaike Information Criterion (AIC) significantly by about 2845 points. The stepwise forward regression identifies light as the most significant predictor, followed by temperature, VPD, turbulence, and CO₂. Since the returns decrease after six to seven predictors, creating a simpler model with the first five to six predictors may suffice.
+
+```{r}
+# Manually define ecological descriptions for each predictor for my own interpretation
+description_map <- c(
+  "PPFD_IN"   = "Photosynthetic photon flux density, incoming",
+  "LW_IN_F"   = "Longwave radiation, incoming",
+  "VPD_F_MDS" = "Vapor pressure deficit (gap‐filled)",
+  "TA_F_MDS"  = "Air temperature (gap‐filled)",
+  "WS_F"      = "Wind speed",
+  "USTAR"     = "Friction velocity (u*)",
+  "SW_IN_F"   = "Shortwave radiation, incoming",
+  "P_F"       = "Precipitation",
+  "CO2_F_MDS" = "CO₂ mole fraction (gap‐filled)",
+  "PA_F"      = "Atmospheric pressure",
+  "VPD_F"     = "Vapor Pressure Deficit"
+)
+
+# Create a tibble that shows step #, variable, and description
+tibble(
+  Step        = seq_along(result$predictors),
+  Variable    = result$predictors,
+  Description = description_map[result$predictors]
+)
+```

@@ -1,0 +1,300 @@
+---
+title: "Report Exercise Chapter 10"
+author: "Ananda Kurth"
+date: "2025-06-01"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+---
+
+# Chapter 10 - Report Exercises
+
+## 1. Introduction
+
+In this exercise, I compare linear regression and K-nearest neighbors (KNN).
+
+------------------------------------------------------------------------
+
+## 2. Data Loading and Cleaning
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r libraries, message=FALSE, warning=FALSE}
+# Load libraries
+library(tidyverse)
+library(dplyr)
+library(ggplot2)
+library(readr)
+library(tidyr)
+library(caret)
+library(recipes)
+library(visdat)
+library(rsample)
+```
+
+```{r}
+# Read raw FLUXNET data; only keep columns of interest, convert timestamps,
+# and override -9999 with NA. Then apply QC filters.
+daily_fluxes <- read_csv("../data/FLX_CH-Dav_FLUXNET2015_FULLSET_DD_1997-2014_1-3.csv",
+                         show_col_types = FALSE) |>
+  # Select only variables we need: timestamp, target (GPP), QC flags, covariates
+  select(
+    TIMESTAMP,
+    GPP_NT_VUT_REF,
+    # target
+    ends_with("_QC"),
+    # quality‐control flags
+    ends_with("_F"),
+    # meteorological covariates-contains("JSB")    # drop irrelevant variable
+  ) |>
+  # Convert TIMESTAMP from character "YYYYMMDD" to Date
+  mutate(TIMESTAMP = ymd(TIMESTAMP)) |>
+  # Replace all -9999 sentinel values with NA
+  mutate(across(where(is.numeric), ~ na_if(., -9999))) |>
+  # Apply QC threshold: if QC < 0.8, set measurement to NA
+  mutate(
+    GPP_NT_VUT_REF = ifelse(NEE_VUT_REF_QC < 0.8, NA, GPP_NT_VUT_REF),
+    TA_F           = ifelse(TA_F_QC        < 0.8, NA, TA_F),
+    SW_IN_F        = ifelse(SW_IN_F_QC     < 0.8, NA, SW_IN_F),
+    LW_IN_F        = ifelse(LW_IN_F_QC     < 0.8, NA, LW_IN_F),
+    VPD_F          = ifelse(VPD_F_QC       < 0.8, NA, VPD_F),
+    PA_F           = ifelse(PA_F_QC        < 0.8, NA, PA_F),
+    P_F            = ifelse(P_F_QC         < 0.8, NA, P_F),
+    WS_F           = ifelse(WS_F_QC        < 0.8, NA, WS_F)
+  ) |>
+  # Drop all QC columns (we no longer need QC flags themselves)
+  select(-ends_with("_QC"))
+```
+
+```{r}
+# Inspect missing data patterns
+vis_miss(daily_fluxes, cluster = FALSE, warn_large_data = FALSE)
+```
+
+> LW_IN_F has a lot of missing values. Since LW_IN_F is not crucial for GPP prediction, I drop it:
+
+```{r}
+daily_fluxes <- daily_fluxes |> select(-LW_IN_F)
+```
+
+```{r}
+# Drop any rows that still contain missing data, to simplify modeling.
+daily_fluxes <- daily_fluxes |> drop_na()
+```
+
+```{r}
+# Does GPP look well‐behaved?
+ggplot(daily_fluxes, aes(x = GPP_NT_VUT_REF)) +
+  geom_histogram(bins = 30,
+                 fill = "steelblue",
+                 color = "white") +
+  labs(title = "Distribution of GPP_NT_VUT_REF (Target)", x = "GPP_NT_VUT_REF", y = "Count") +
+  theme_minimal()
+```
+
+> Comment: The histogram shows no strong skew in GPP_NT_VUT_REF. I therefore do not apply any transformation to the target.
+
+## 3. Data Splitting
+
+```{r}
+set.seed(2025)  # for reproducibility
+split <- initial_split(daily_fluxes, prop = 0.7, strata = "VPD_F")
+daily_fluxes_train <- training(split)
+daily_fluxes_test  <- testing(split)
+```
+
+## 4. Preprocessing Recipe
+
+I will predict daily GPP using three predictors: SW_IN_F, VPD_F, and TA_F. Because some of these predictors are not strictly positive (TA_F can be zero or negative), I apply a Yeo–Johnson transformation instead of Box–Cox.
+
+```{r}
+pp <- recipe(GPP_NT_VUT_REF ~ SW_IN_F + VPD_F + TA_F, data = daily_fluxes_train) |>
+  step_YeoJohnson(all_predictors()) |>
+  step_center(all_numeric_predictors()) |>
+  step_scale(all_numeric_predictors())
+```
+
+## 5. Model Fitting
+
+### 5.1 Linear Regression
+
+```{r}
+mod_lm <- train(
+  pp,
+  data    = daily_fluxes_train,
+  method  = "lm",
+  trControl = trainControl(method = "none"),
+  metric  = "RMSE"
+)
+```
+
+### 5.2 K-Nearest Neighbors (k = 8)
+
+```{r}
+mod_knn <- train(
+  pp,
+  data      = daily_fluxes_train,
+  method    = "knn",
+  tuneGrid  = data.frame(k = 8),
+  trControl = trainControl(method = "none"),
+  metric    = "RMSE"
+)
+```
+
+## 6. Load Model Evaluation Function
+
+```{r}
+source("../R/eval_model.R")
+```
+
+## 7. Evaluate Linear Regression vs. KNN
+
+### 7.1 Linear Regression
+
+```{r}
+eval_model(mod_lm, daily_fluxes_train, daily_fluxes_test)
+```
+
+### 7.2 KNN (k = 8)
+
+```{r}
+eval_model(mod_knn, daily_fluxes_train, daily_fluxes_test)
+```
+
+------------------------------------------------------------------------
+
+## 8. Interpretation of Model Differences
+
+### Why is the difference between the evaluation on the training and the test set larger for the KNN model than for the linear regression model?
+
+> KNN is a flexible method that works well with training data but has trouble with new data. This leads to a larger difference in error rates between training and test results. In contrast, linear regression uses a fixed linear model. It may not fit the data as closely but provides more consistent results with less variation. This results in a smaller gap in error rates between training and test data, though it may miss some nonlinear patterns.
+
+### Why does the evaluation on the test set indicate a better model performance of the KNN model than the linear regression model?
+
+> The relationship between GPP and other factors can be complex, often showing non-linear patterns or local interactions. Traditional linear regression methods cannot adapt well to these complexities. However, KNN with a setting of $k$ equal to 8 can handle these patterns better. It does this by averaging data from multiple neighbors, which helps prevent overfitting. Yeo–Johnson preprocessing helps stabilize the distributions of the predictor variables. This benefits both KNN and linear regression, but KNN is better at capturing complex patterns due to its flexibility.
+
+### How would you position the KNN and the linear regression model along the spectrum of the bias-variance trade-off?
+
+> Linear regression has higher bias and lower variance. This means it is a simpler model. It is less likely to overfit, but it might not perform well if the real relationship is not a straight line. In contrast, KNN with $k$ set to 8 has lower bias but higher variance compared to linear regression. This model is more flexible and reduces the risk of serious overfitting by averaging the results of eight nearby points. If we decrease k, the variance increases. If we increase k, the bias increases.
+
+## 9. Temporal Visualization of Observed vs. Predicted GPP
+
+```{r}
+daily_fluxes_train <- daily_fluxes_train |>
+  mutate(
+    fitted_lm  = predict(mod_lm, newdata = daily_fluxes_train),
+    fitted_knn = predict(mod_knn, newdata = daily_fluxes_train)
+  )
+
+plot_data <- daily_fluxes_train |>
+  filter(lubridate::year(TIMESTAMP) %in% 2005:2006) |>
+  select(TIMESTAMP, GPP_NT_VUT_REF, fitted_lm, fitted_knn) |>
+  pivot_longer(
+    cols      = c(fitted_lm, fitted_knn),
+    names_to  = "model",
+    values_to = "predicted"
+  ) |>
+  mutate(model = recode(model, "fitted_lm"  = "Linear Regression", "fitted_knn" = "KNN (k=8)"))
+```
+
+```{r}
+# Plot
+ggplot(plot_data, aes(x = TIMESTAMP)) +
+  geom_line(aes(y = predicted, color = model)) +
+  geom_line(aes(y = GPP_NT_VUT_REF),
+            color = "black",
+            linetype = "dashed") +
+  facet_wrap(~ model, ncol = 1) +
+  labs(
+    title = "Observed (dashed) vs. Predicted GPP Across Models",
+    subtitle = "Each panel shows the model's predicted GPP vs. the observed time series",
+    x = "Date",
+    y = "GPP"
+  ) +
+  theme_minimal() +
+  theme(
+    legend.position = "none",
+    plot.title = element_text(face = "bold"),
+    strip.text = element_text(face = "bold")
+  ) +
+  scale_color_manual(values = c(
+    "Linear Regression" = "darkorange",
+    "KNN (k=8)" = "darkgreen"
+  ))
+```
+
+## 10. The Role of $k$ in KNN
+
+This section looks at how the parameter $k$ affects performance, focusing on Mean Absolute Error (MAE) and R².
+
+When $k$ is close to 1, the model overfits, resulting in low training MAE and high test MAE. When $k$ equals the total number of training examples, predictions become averages, leading to high MAE and low R² due to underfitting.
+
+Generally, the connection between $k$ and test MAE creates a U-shaped curve, with the best performance seen at mid-range $k$ values.
+
+### 10.2 Empirical Test: Code to Compute MAE vs. k
+
+```{r}
+source("../R/eval_KNN.R")
+
+# Evaluate KNN for k = 1, 2, ..., 30
+k_values <- 1:30
+
+results_k <- map_dfr(
+  .x = k_values,
+  .f = ~ eval_KNN(.x, daily_fluxes_train, daily_fluxes_test, pp)
+)
+
+# Inspect first few rows
+head(results_k)
+```
+
+### 10.3 Visualize MAE vs. k
+
+```{r}
+results_k |>
+  ggplot(aes(x = k)) +
+  geom_line(aes(y = MAE_test, color = "Test MAE"), linewidth = 1) +
+  geom_point(aes(y = MAE_test, color = "Test MAE"), size = 1.5) +
+  geom_line(aes(y = MAE_train, color = "Train MAE"),
+            linetype = "dashed",
+            linewidth = 1) +
+  geom_point(aes(y = MAE_train, color = "Train MAE"), size = 1.5) +
+  labs(
+    title = "MAE (Train vs. Test) as a Function of k in KNN",
+    x     = "k (Number of Neighbors)",
+    y     = "Mean Absolute Error",
+    color = ""
+  ) +
+  scale_color_manual(values = c(
+    "Train MAE" = "darkgreen",
+    "Test MAE" = "darkorange"
+  )) +
+  theme_minimal()
+```
+
+-   The dashed line + points show training MAE as $k$ increases.
+
+-   The solid line + points show test MAE as $k$ increases.
+
+#### 10.3.1 Overfitting and Underfitting Regions
+
+A small $k$ (like 1 or 2) leads to low training Mean MAE but high test MAE, indicating poor generalization to new data. A large $k$ results in nearly constant predictions close to the average, causing high MAE for both training and testing. Typically, the test MAE curve dips, helping identify an "optimal" $k$.
+
+### 10.4 Is There an “Optimal” k?
+
+```{r}
+# Find k that minimizes MAE_test
+optimal_row <- results_k |> filter(MAE_test == min(MAE_test))
+optimal_row
+```
+
+The optimal value of $k$, determined on the test set, is found where the MAE_test is minimized. In this particular dataset, the choice of $k$ = 27 yields the lowest test mean absolute error.
+
+## 11. Conclusions
+
+The GPP target behavior has little skewness, so it doesn’t need any transformation. Linear regression has high bias and low variance, which means it has a smaller gap between training and test results but is less flexible. In contrast, KNN with can better capture nonlinear relationships, showing lower bias and higher variance. This model does better than linear regression on tests.
+
+In KNN, choosing $k$ affects performance. When $k$ is close to 1, overfitting happens, which lowers training error but raises test error. When $k$ is close to the total number of data points $N$, underfitting occurs, causing both training and test errors to rise.
