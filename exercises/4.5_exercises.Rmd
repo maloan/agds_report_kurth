@@ -73,8 +73,10 @@ daily_fluxes <- half_hourly_fluxes |>
   mutate(date = as_date(TIMESTAMP_START)) |> # converts time object to a date object
   group_by(date) |>
   summarise(
-    VPD_F_mean = mean(VPD_F, na.rm = TRUE),     # Mean
-    VPD_F_q25  = quantile(VPD_F, 0.25, na.rm = TRUE), # 25% quantile
+    VPD_F_mean = mean(VPD_F, na.rm = TRUE),
+    # Mean
+    VPD_F_q25  = quantile(VPD_F, 0.25, na.rm = TRUE),
+    # 25% quantile
     VPD_F_q75  = quantile(VPD_F, 0.75, na.rm = TRUE) # 75% quantile
   )
 
@@ -161,12 +163,17 @@ ggplot(NEE_hourly_data_quality, aes(x = hour)) +
   geom_line(aes(y = prop_good, color = "Good Gap-filled"), size = 1) +
   geom_line(aes(y = prop_medium, color = "Medium Gap-filled"), size = 1) +
   geom_line(aes(y = prop_poor, color = "Poor Gap-filled"), size = 1) +
-  labs(title = "Proportion of NEE Data Quality by Hour",
-       x = "Hour of Day",
-       y = "Proportion") +
-  scale_color_manual(values = c("Measured" = "blue", "Good Gap-filled" = "green",
-                                "Medium Gap-filled" = "orange", "Poor Gap-filled" = "red")) +
+  labs(title = "Proportion of NEE Data Quality by Hour", x = "Hour of Day", y = "Proportion") +
+  scale_color_manual(
+    values = c(
+      "Measured" = "blue",
+      "Good Gap-filled" = "green",
+      "Medium Gap-filled" = "orange",
+      "Poor Gap-filled" = "red"
+    )
+  ) +
   theme_minimal()
+
 
 # 2. Aggregate Half-Hourly GPP Data to Daily Means
 # a) Using the full data set (all GPP_NT_VUT_REF values)
@@ -193,11 +200,16 @@ cat("Overall Mean GPP (Only Measured Data):",
     "\n")
 
 ggplot() +
-  geom_density(data = GPP_daily, aes(x = GPP_mean, fill = "Full Dataset"), alpha = 0.5) +
-  geom_density(data = GPP_daily_measured, aes(x = GPP_mean_measured, fill = "Measured Only"), alpha = 0.5) +
-  labs(title = "Comparison of Daily GPP Distributions",
-       x = "GPP (gC m^-2 d^-1)",
-       y = "Density") +
-  scale_fill_manual(values = c("Full Dataset" = "blue", "Measured Only" = "red")) +
+  geom_density(data = GPP_daily,
+               aes(x = GPP_mean, fill = "Full Dataset"),
+               alpha = 0.5) +
+  geom_density(data = GPP_daily_measured,
+               aes(x = GPP_mean_measured, fill = "Measured Only"),
+               alpha = 0.5) +
+  labs(title = "Comparison of Daily GPP Distributions", x = "GPP (gC m^-2 d^-1)", y = "Density") +
+  scale_fill_manual(values = c(
+    "Full Dataset" = "blue",
+    "Measured Only" = "red"
+  )) +
   theme_minimal()
 ```

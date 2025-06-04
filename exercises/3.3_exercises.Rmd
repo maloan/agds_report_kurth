@@ -8,7 +8,7 @@ output: html_document
 # for loop
 vec_sum <- 0
 vec_num <- seq(100)
-for (idx in seq(length(vec_num))){
+for (idx in seq(length(vec_num))) {
   vec_sum = vec_sum + vec_num[idx]
 }
 vec_sum
@@ -18,7 +18,7 @@ vec_sum
 idx = 1           # initialize counter
 vec_num <- seq(100)
 vec_sum <- 0     # initialize sum
-while (idx <= 100){
+while (idx <= 100) {
   vec_sum <- vec_sum + vec_num[idx]
   idx = idx + 1
 }
@@ -29,8 +29,8 @@ vec_sum
 ```{r gauss_variation_2}
 vec_sum <- 0
 vec_num <- seq(100)
-for (idx in seq(length(vec_num))){
-  if(vec_num[idx]%%3 == 0 & vec_num[idx]%%7 == 0){
+for (idx in seq(length(vec_num))) {
+  if (vec_num[idx] %% 3 == 0 & vec_num[idx] %% 7 == 0) {
     vec_sum = vec_sum + vec_num[idx]
   }
 }
@@ -42,8 +42,9 @@ mymat <- matrix(c(6, 7, 3, NA, 15, 6, 7,
               NA, 9, 12, 6, 11, NA, 3, 
               9, 4, 7, 3, 21, NA, 6, 
               rep(NA, 7)),
-            nrow = 4, byrow = TRUE)
+              nrow = 4, byrow = TRUE)
 myvec <- c(8, 4, 12, 9, 15, 6)
+
 
 for (idx in seq(nrow(mymat))) {
   for (idy in seq(ncol(mymat))) {
@@ -60,7 +61,7 @@ mymat
 
 ```{r interpolation}
 myvec <- c(rep(6, 25), rep(NA, 41), rep(-20, 34))
-interp_vector <- approx(myvec, method="linear")
+interp_vector <- approx(myvec, method = "linear")
 plot(interp_vector)
 ```
 

@@ -19,26 +19,25 @@ library(lubridate)
 1.  While **not leaving your R session**, download and open the files at the following locations: <https://raw.githubusercontent.com/geco-bern/agds_book/refs/heads/main/book/data/demo_1.csv> <https://raw.githubusercontent.com/geco-bern/agds_book/refs/heads/main/book/data/demo_2.csv> <https://raw.githubusercontent.com/geco-bern/agds_book/refs/heads/main/book/data/demo_3.csv>
 
 ```{r download}
-
 # read in the first demo
 demo_01 <- read.table(
-    "https://raw.githubusercontent.com/geco-bern/agds_book/refs/heads/main/book/data/demo_1.csv",
-    sep = ",",
-    header = TRUE
-    )
+  "https://raw.githubusercontent.com/geco-bern/agds_book/refs/heads/main/book/data/demo_1.csv",
+  sep = ",",
+  header = TRUE
+)
 
 # read in the second demo
 demo_02 <- read.table(
-    "https://raw.githubusercontent.com/geco-bern/agds_book/refs/heads/main/book/data/demo_2.csv",
-    sep = ",",
-    header = TRUE
-    )
+  "https://raw.githubusercontent.com/geco-bern/agds_book/refs/heads/main/book/data/demo_2.csv",
+  sep = ",",
+  header = TRUE
+)
 
 # read in the third demo
 demo_03 <- read.table(
-    "https://raw.githubusercontent.com/geco-bern/agds_book/refs/heads/main/book/data/demo_3.csv",
-    sep = ",",
-    header = TRUE
+  "https://raw.githubusercontent.com/geco-bern/agds_book/refs/heads/main/book/data/demo_3.csv",
+  sep = ",",
+  header = TRUE
 )
 ```
 
@@ -49,30 +48,22 @@ demo_all <- bind_rows(demo_01, demo_02, demo_03)
 
 # writing the data to a temporary CSV file
 write.table(
-    demo_all, 
-    file = file.path(tempdir(), "tmp_csv_file.csv"),
-    col.names = TRUE,
-    row.names = FALSE,
-    sep = ","
+  demo_all,
+  file = file.path(tempdir(), "tmp_csv_file.csv"),
+  col.names = TRUE,
+  row.names = FALSE,
+  sep = ","
 )
 
 # reading the data from the temporary CSV file
-demo_all_reload <- read.table(
-    file.path(tempdir(), "tmp_csv_file.csv"),
-    sep = ",",
-    header = TRUE
-)
+demo_all_reload <- read.table(file.path(tempdir(), "tmp_csv_file.csv"),
+                              sep = ",",
+                              header = TRUE)
 
 # writing the data to a JSON file and save in the current working directory
-write_json(
-    demo_all_reload,
-    path = file.path(tempdir(), "tmp_json_file.json")
-)  
+write_json(demo_all_reload, path = file.path(tempdir(), "tmp_json_file.json"))
 
-df_json <- read_json(
-  file.path(tempdir(), "tmp_json_file.json"),
-  simplifyVector = TRUE
-)
+df_json <- read_json(file.path(tempdir(), "tmp_json_file.json"), simplifyVector = TRUE)
 
 identical(df_json, demo_all_reload)
 ```
@@ -87,7 +78,9 @@ Download and open the following file: <https://raw.githubusercontent.com/geco-be
 
 ```{r}
 library(ncdf4)
-nc <- nc_open("https://raw.githubusercontent.com/geco-bern/agds_book/refs/heads/main/book/data/demo_data.nc")
+nc <- nc_open(
+  "https://raw.githubusercontent.com/geco-bern/agds_book/refs/heads/main/book/data/demo_data.nc"
+)
 nc
 ```
 
@@ -95,11 +88,7 @@ nc
 
 ```{r write}
 # write the data as a geotiff
-terra::writeRaster(
-  nc,
-  filename = "./test.tif",
-  overwrite = TRUE
-  ) 
+terra::writeRaster(nc, filename = "./test.tif", overwrite = TRUE) 
 ```
 
 5.  Download and open the following file: <https://raw.githubusercontent.com/geco-bern/agds_book/refs/heads/main/book/data/demo_data.tif>.
@@ -142,12 +131,8 @@ query <- list(
 status <- httr::GET(
   url = url,
   query = query,
-  httr::write_disk(
-    path = file.path(tempdir(), "T_SAND.nc"),
-    overwrite = TRUE
-  )
+  httr::write_disk(path = file.path(tempdir(), "T_SAND.nc"), overwrite = TRUE)
 )
-
 ```
 
 Visualize/plot the data as a simple map.
@@ -173,16 +158,13 @@ query <- list(
   "north" = 34,
   "disableProjSubset" = "on",
   "horizStride" = 1,
-  "accept" = "netcdf4"      
+  "accept" = "netcdf4"
 )
 
 status <- httr::GET(
   url = url,
   query = query,
-  httr::write_disk(
-    path = file.path(tempdir(), "T_SILT.nc"),
-    overwrite = TRUE
-  )
+  httr::write_disk(path = file.path(tempdir(), "T_SILT.nc"), overwrite = TRUE)
 )
 
 silt <- terra::rast(file.path(tempdir(), "T_SILT.nc"))
@@ -198,5 +180,4 @@ terra::plot(silt)
 ```{r}
 library("hwsdr")
 library("MODISTools")
-
 ```
