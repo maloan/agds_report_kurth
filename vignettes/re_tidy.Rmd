@@ -1,15 +1,24 @@
 ---
-title: "Analyzing changes in soil organic matter during elevated CO2 experiments"
+title: "Analyzing Changes in Soil Organic Matter During Elevated CO₂ Experiments"
 author: "Ananda Kurth"
 date: "2025-03-03"
-output: html_document
+output: 
+  html_document:
+    toc: true
+    toc_float: true
 ---
+
+# Chapter 4 - Report Exercises
+
+## 1. Introduction
+
+This exercise compares Soil organic carbon (SOC) measurements from carbon dioxide (CO₂) enrichment experiments.
+
+## 2. Library Loading
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
-
-## 1. Load libraries
 
 ```{r load-libraries, message=FALSE, warning=FALSE}
 library(dplyr)
@@ -23,104 +32,110 @@ library(zoo)
 library(ggplot2)
 ```
 
-## 2. Load dataset
+## 3. Raw Data Import
 
 ```{r load-dataset}
 raw_data <- read.xlsx(here::here("data/1249534s1-s6.xlsx"))
 ```
 
-## 3. Clean dataset
+## 4. Data Cleaning
 
 ```{r clean-data}
 cleaned_data <- as_tibble(raw_data) |>
   rename(
-    experiment = Database.S1..Overview.of.CO2.enrichment.studies.reporting.soil.C.contents.that.were.used.in.our.analysis.,
-    citation = X2,
-    depth = X3,
-    sample_date = X4,
-    time_years = X5,
-    SOC_ambient = X6,
-    SOC_elevated = X7,
+    experiment           = Database.S1..Overview.of.CO2.enrichment.studies.reporting.soil.C.contents.that.were.used.in.our.analysis.,
+    citation             = X2,
+    depth                = X3,
+    sample_date          = X4,
+    time_years           = X5,
+    SOC_ambient          = X6,
+    SOC_elevated         = X7,
     n_sample_SOC_ambient = X8,
     n_sample_SOC_elevated = X9,
-    description_source = X10,
-    value_treatment = X11
-  ) |> # Rename the columns.
-  slice(-c(1:3), ) |> # Remove empty rows at the top.
+    description_source   = X10,
+    value_treatment      = X11
+  ) |>                    # Rename columns for clarity
+  slice(-c(1:3), ) |>    # Remove top rows that contain header metadata
   select(experiment,
          time_years,
          starts_with("SOC"),
-         starts_with("n_sample")) |> # Select columns that will be needed later.
+         starts_with("n_sample")) |>                    # Keep only the columns needed for our analysis
   mutate(
-    time_years = as.numeric(time_years),
+    time_years  = as.numeric(time_years),
     SOC_ambient = as.numeric(SOC_ambient),
     SOC_elevated = as.numeric(SOC_elevated)
-  ) |> # Make sure the data is numeric.
-  mutate(experiment = na.locf(na.locf(experiment, na.rm = FALSE), fromLast = TRUE)) |> # Interpolate experiment name
-  filter(!is.na(experiment)) # Remove any empty experiments if there are any.
+  ) |>                    # Convert these to numeric
+  mutate(experiment = na.locf(na.locf(experiment, na.rm = FALSE), fromLast = TRUE)) |>                    # Fill missing experiment names downward
+  filter(!is.na(experiment))  # Drop any stray rows without an experiment name
 ```
 
-## 4. Save cleaned dataset.
+## 5. Save Cleaned Data to CSV
 
 ```{r save-dataset}
-write_csv(cleaned_data, file = here::here("data/cleaned_data.csv")) # Save cleaned dataset as CSV.
-head(cleaned_data) # View cleaned dataset.
+write_csv(cleaned_data, file = here::here("data/cleaned_data.csv"))
+head(cleaned_data)
 ```
 
-## 5. Calculate the log response and aggregate the data into experiment phases.
+## 6. Compute Log-Response Ratio & Define Phases
 
 ```{r log-response}
 SOC_data <- read_csv(here::here("data/cleaned_data.csv"), show_col_types = FALSE) |>
-  mutate(log_response_ratio = log(SOC_elevated / SOC_ambient)) |> # Calculate lrr per experiment.
+  mutate(log_response_ratio = log(SOC_elevated / SOC_ambient)) |>                     # Compute LRR for each row
   mutate(
     phase = case_when(
-      time_years < 3 ~ "early_phase",
-      time_years >= 3 &
-        time_years <= 6 ~ "mid_phase",
-      time_years > 6 ~ "late_phase"
+      time_years < 3                ~ "early_phase",
+      time_years >= 3 & time_years <= 6 ~ "mid_phase",
+      time_years > 6                ~ "late_phase"
     )
-  ) # aggregate data across experiments into phases.
+  )                       # Assign a phase label
 ```
 
-## 6. Calculate the mean log response ratio for each phase
+## 7. Phase-Wise Aggregation
+
+Within each phase, I compute the mean log-response ratio to see the average effect across all experiments.
 
 ```{r mean-log-response}
 phase_aggregate <- SOC_data |>
-  group_by(phase) |> # group by phase
-  summarize(mean_log_response_ratio = mean(log_response_ratio, na.rm = TRUE)) # calculate the mean lrr per phase.
+  group_by(phase) |>
+  summarize(mean_log_response_ratio = mean(log_response_ratio, na.rm = TRUE))
 
-phase_aggregate |> knitr::kable() # View result
+phase_aggregate |>
+  knitr::kable()
 ```
 
-------------------------------------------------------------------------
-
-## 7.Visualize the mean log response ration for each phase
+## 8. Visualize Mean LRR by Phase
 
 ```{r visualize-results}
 ggplot(phase_aggregate,
        aes(x = phase, y = mean_log_response_ratio, fill = phase)) +
   geom_bar(stat = "identity") +
-  labs(title = "Mean Log-Response Ratio by Experimental Phase", x = "Experimental Phase", y = "Mean Log-Response Ratio") +
-  scale_x_discrete(limits = c("early_phase", "mid_phase", "late_phase")) +  # X axis value order
+  labs(title = "Mean Log-Response Ratio by Experimental Phase", x     = "Experimental Phase", y     = "Mean Log-Response Ratio") +
+  scale_x_discrete(limits = c("early_phase", "mid_phase", "late_phase")) +
   theme_minimal() +
   theme(legend.position = "none",
-        # Remove legend
-        plot.title = element_text(hjust = 0.5))  # Center the title
+        plot.title      = element_text(hjust = 0.5))
 ```
 
-## 8. Interpretation
+## 9. Interpretation & Discussion
 
-1.  **What are the data that you are looking at?\
-    ***The dataset contains measurements of soil organic carbon (SOC) under both ambient and elevated CO~2~ levels across multiple experiments. The variable `n_sample_SOC_ambient` represents the number of observations (sample size) under ambient conditions, while `n_sample_SOC_elevated` indicates the sample size under elevated CO~2~ conditions. The variable `time_years` refers to the total number of years each experiment has been conducted. The `log_response_ratio` measures the effect of elevated CO~2~ on SOC for each observation, and the `mean_log_response_ratio` aggregates the response across different experimental phases. The experimental phases are categorized as follows: `early_phase` if the experiment has been running for less than three years, `late_phase` if it has been running for more than six years, and `mid_phase` if it has been running for a duration between three and six years.*
+### What are the data that you are looking at?
 
-2.  **What do you expect your analysis to show, what is your hypothesis?**\
-    **How should soil organic matter content change under elevated *CO~2~*?**\
-    *The hypothesis is that elevated CO~2~ levels enhance plant growth, leading to increased biomass production. As more plant residues enter the soil, soil organic carbon (SOC) levels should rise due to greater carbon input.*
+We have Soil organic carbon (SOC) measurements from multiple carbon dioxide (CO₂) enrichment experiments. Each record includes SOC under ambient and elevated CO₂, and the duration (in years) since experiment start.
 
-3.  **Interpret your results after aggregating the data: What do your final numbers mean? Do they support your initial hypothesis? Why so, why not?\
-    ***The mean log response ratio indicates whether the soil organic carbon (SOC) levels increased or decreased under elevated CO~2~ conditions. A mean log response greater than 0 suggests that SOC increased, while a mean log response less than 0 indicates a decrease in SOC under higher CO~2~ levels. In this study, the mean log response ratios were positive during the early phase (0.0125) and mid-phase (0.0173), but negative during the late phase (-0.0306). This finding only partially supports the hypothesis. There was a slight increase in SOC during the first six years of elevated CO~2~ levels, which supports the hypothesis. However, this was followed by a decrease in SOC beyond the six-year mark, contradicting the hypothesis. This suggests that elevated CO~2~ levels may only lead to a short-term increase in SOC. The original paper offers a possible explanation for this phenomenon: The initial increase in SOC may lead to greater microbial decomposition, which accelerates soil carbon turnover and limits the long-term accumulation of carbon in the soil.*
+### What do you expect your analysis to show, what is your hypothesis? How should soil organic matter content change under elevated CO2?
 
-------------------------------------------------------------------------
+Elevated levels of CO₂ generally increases plant growth, which in turn increases the amount of carbon being deposited into the soil. As a result, I expect that the SOC in conditions of elevated CO₂ will surpass that of ambient conditions.
 
-**Reference:** 
-Kees Jan van Groenigen *et al.,* Faster Decomposition Under Increased Atmospheric CO~2~ Limits Soil Carbon Storage. *Science* **344**, 508-509 (2014). DOI: [10.1126/science.1249534](#0)
+### Interpret your results after aggregating the data: What do your final numbers mean?
+
+-   Early Phase (t \< 3 years): mean LRR ≈ +0.0125 → a \~1.25% average increase in SOC under elevated CO₂.
+
+-   Mid Phase (3 ≤ t ≤ 6 years): mean LRR ≈ +0.0173 → a \~1.73% average increase, slightly larger.
+
+-   Late Phase (t \> 6 years): mean LRR ≈ –0.0306 → a \~3.06% decrease under elevated CO₂.
+
+In the early phases, SOC levels are higher under elevated CO₂ conditions, but this reverses in the late phase, causing SOC to fall below ambient levels.
+
+### Do they support your initial hypothesis? Why so, why not?Does this support our hypothesis?
+
+The results partially align with my hypothesis. The early and mid phases do show an increase in SOC, consistent with my expectation that elevated CO₂ boosts soil carbon through higher plant inputs. However, the late phase shows a negative LRR. This indicates that any initial gain in SOC may be reversed after about 6 years, likely because microbial decomposition and carbon turnover accelerate under elevated CO₂ (van Groenigen et al. (2014)).
