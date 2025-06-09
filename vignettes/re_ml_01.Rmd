@@ -190,7 +190,6 @@ daily_fluxes_train <- daily_fluxes_train |>
   )
 
 plot_data <- daily_fluxes_train |>
-  filter(lubridate::year(TIMESTAMP) %in% 2005:2006) |>
   select(TIMESTAMP, GPP_NT_VUT_REF, fitted_lm, fitted_knn) |>
   pivot_longer(
     cols      = c(fitted_lm, fitted_knn),
